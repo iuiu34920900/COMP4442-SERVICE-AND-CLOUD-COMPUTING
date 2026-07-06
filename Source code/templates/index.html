@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Intelligent Transportation System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">DASHBOARD</div>
+        <a href="/" class="nav-item nav-active">📊 Driver Summary</a>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Driving Behavior Analysis</h1>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Driver ID</th>
+                        <th>Car Plate Number</th>
+                        <th>Overspeed Count</th>
+                        <th>Overspeed Time(min)</th>
+                        <th>Neutral Slide Time(min)</th>
+                        <th>Rapid Speedup Count</th>
+                        <th>Rapid Slowdown Count</th>
+                        <th>Fatigue Driving Count</th>
+                        <th>Hthrottle Stop Count</th>
+                        <th>Oil Leak Count</th>
+                        <th>Monitor</th>
+                    </tr>
+                </thead>
+                <tbody id="data">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+<SCRIPT>
+ 
+    $(document).ready(function() {
+        fetch('/getSummary')
+        .then(res => res.json())
+        .then(data => {
+            let html='';
+            data.forEach(d => {
+                html += `<tr>
+                    <td><strong style="color: #0f172a;">${d.driverID}</strong></td>
+                    <td>${d.carPlateNumber}</td>
+                    <td>${d.overspeed_count}</td>
+                    <td>${d.overspeed_time_min}</td>
+                    <td>${d.neutral_slide_time_min}</td>
+                    <td>${d.rapid_speedup_count}</td>
+                    <td>${d.rapid_slowdown_count}</td>
+                    <td>${d.fatigue_count}</td>
+                    <td>${d.hthrottleStop_count}</td>
+                    <td>${d.oilLead_count}</td>
+                    <td><a href="/monitor?driver=${d.driverID}">Monitor</a></td>
+                    </tr>`;
+            });
+            $('#data').html(html);
+        })
+        .catch(error => {
+            console.log("error loading summary json", error);
+        });
+    });
+</SCRIPT>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor | {{ driver_id }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.0/highstock.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.0/modules/exporting.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">DASHBOARD</div>
+        <a href="/" class="nav-item">📊 Driver Summary</a>
+        <a href="#" class="nav-item nav-active">📍 Live Monitor</a>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Driving Speed Monitor</h1>
+            <a href="/" class="btn-secondary">← Back to Summary</a>
+        </div>
+
+        <div class="card">
+            <h2>Driver Statistics</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Driver ID</th>
+                        <th>Car Plate Number</th>
+                        <th>Overspeed Count</th>
+                        <th>Overspeed Time(min)</th>
+                        <th>Neutral Slide Time(min)</th>
+                        <th>Rapid Speedup Count</th>
+                        <th>Rapid Slowdown Count</th>
+                        <th>Fatigue Driving Count</th>
+                        <th>Hthrottle Stop Count</th>
+                        <th>Oil Leak Count</th>
+                    </tr>
+                </thead>
+                <tbody id="data">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Driving Panel (Real-Time Updates)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Speed</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Direction</th>
+                        <th>Overspeed</th>
+                        <th>Site Name</th>
+                    </tr>
+                </thead>
+                <tbody id="info">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="padding: 10px;">
+            <div id="container" style="min-width:400px; height:450px; border: none;"></div>
+        </div>
+    </div>
+
+<SCRIPT>
+    
+    const driverId = "{{ driver_id }}";
+
+    $(document).ready(function() {
+        fetch('/getDriver_data/'+driverId)
+        .then(res => res.json())
+        .then(d => {
+            let html='';
+            html += `<tr>
+                <td><strong style="color: #0f172a;">${d.driverID}</strong></td>
+                <td>${d.carPlateNumber}</td>
+                <td>${d.overspeed_count}</td>
+                <td>${d.overspeed_time_min}</td>
+                <td>${d.neutral_slide_time_min}</td>
+                <td>${d.rapid_speedup_count}</td>
+                <td>${d.rapid_slowdown_count}</td>
+                <td>${d.fatigue_count}</td>
+                <td>${d.hthrottleStop_count}</td>
+                <td>${d.oilLead_count}</td>
+                </tr>`;
+            $('#data').html(html);
+        })
+        .catch(error => {
+            console.log("error loading summary json id: "+driverId, error);
+        });
+    });
+
+    $(function () {
+      $.getJSON('/getDriver_chart/' + driverId, function (data) {
+          var chartData = data.map(function (record) {
+            return {
+                time: new Date(record.Time).getTime(),
+                speed: record.Speed,
+                latitude: record.Latitude,
+                longitude: record.Longtitude,
+                direction: record.Direction,
+                timeStr: record.Time,
+                siteName: record.siteName || 'N/A',
+                isOverspeed: record.isOverspeed
+            };
+          });
+          chartData.sort(function(a, b) { return a.time - b.time; });
+
+          var curIdx = 0;
+
+        $('#container').highcharts('StockChart', {
+          chart: {
+            events: {
+              load: function () {
+                var chart = $('#container').highcharts();
+                var series = chart.series[0];
+
+                updateData();
+                //30 seconds interval
+                setInterval(updateData, 30000);
+
+                function updateData() {
+                    if (curIdx >= chartData.length) {
+                        return;
+                    }
+
+                    var record = chartData[curIdx];
+                    series.addPoint({
+                        x: record.time,
+                        y: record.speed,
+                        dataLabels: {
+                            enabled: record.isOverspeed == 1,
+                            format: 'Overspeed warning!',
+                            style: {
+                                color: '#DC143C',
+                                fontWeight: 'bold',
+                                fontSize: '12px'
+                            },
+                            y: -15
+                        }
+                    });
+
+                    updateInfo(record);
+                    curIdx++;
+                }
+
+                function updateInfo(record) {
+                    var html = `<tr>
+                                    <td><strong style="color: #2563eb;">${record.speed}</strong></td>
+                                    <td>${record.latitude}</td>
+                                    <td>${record.longitude}</td>
+                                    <td>${record.direction}</td>
+                                    <td style="color: ${record.isOverspeed == 1 ? '#DC143C' : '#10b981'}; font-weight: bold;">${record.isOverspeed == 1 ? 'Yes' : 'No'}</td>
+                                    <td>${record.siteName}</td>
+                                </tr>`;
+                    $('#info').html(html);
+                }
+              }
+            }
+          },
+          rangeSelector : {
+            selected : 1
+          },
+          title : {
+            text : 'Real-time Monitoring'
+          },
+          series : [{
+            name : 'Speed',
+            data : [],
+            tooltip: {
+              valueDecimals: 0
+            }
+          }]
+        });
+      });
+    });
+</SCRIPT>
+</body>
+</html>
